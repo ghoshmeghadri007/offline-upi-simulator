@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: offline-upi-simulator
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/offline_upi
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080

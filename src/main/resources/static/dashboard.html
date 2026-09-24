@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Offline UPI Mesh — Demo</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #111; color: #eee; padding: 24px; }
+        button { padding: 10px 16px; margin: 4px; cursor: pointer; }
+        table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+        td, th { border: 1px solid #444; padding: 6px 10px; text-align: left; }
+        pre { background: #1c1c1c; padding: 12px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+<h1>Offline UPI Mesh — Demo</h1>
+
+<div>
+    Sender ID: <input id="senderId" value="1" size="3">
+    Receiver ID: <input id="receiverId" value="2" size="3">
+    Amount: <input id="amount" value="50.00" size="6">
+    <button onclick="send()">📤 Inject into Mesh</button>
+</div>
+<div>
+    <button onclick="gossip()">🔄 Run Gossip Round</button>
+    <button onclick="flush()">📡 Bridges Upload to Backend</button>
+    <button onclick="reset()">♻️ Reset Mesh</button>
+</div>
+
+<h3>Mesh State</h3>
+<pre id="meshState">-</pre>
+
+<h3>Account Balances</h3>
+<table id="accounts"></table>
+
+<h3>Transaction Ledger</h3>
+<table id="transactions"></table>
+
+<script>
+    async function refresh() {
+      const mesh = await (await fetch('/api/mesh/state')).json();
+      document.getElementById('meshState').textContent = JSON.stringify(mesh, null, 2);
+
+      const accounts = await (await fetch('/api/accounts')).json();
+      document.getElementById('accounts').innerHTML =
+        '<tr><th>Wallet ID</th><th>User</th><th>Balance</th><th>Offline Limit</th><th>Status</th></tr>' +
+        accounts.map(a => `<tr><td>${a.id}</td><td>${a.user?.id}</td><td>${a.balance}</td><td>${a.offlineLimit}</td><td>${a.status}</td></tr>`).join('');
+
+      const txns = await (await fetch('/api/transactions')).json();
+      document.getElementById('transactions').innerHTML =
+        '<tr><th>ID</th><th>Sender</th><th>Receiver</th><th>Amount</th><th>Status</th></tr>' +
+        txns.map(t => `<tr><td>${t.id}</td><td>${t.senderId}</td><td>${t.receiverId}</td><td>${t.amount}</td><td>${t.status}</td></tr>`).join('');
+    }
+
+    async function send() {
+  const res = await fetch('/api/demo/send', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      senderId: Number(document.getElementById('senderId').value),
+      receiverId: Number(document.getElementById('receiverId').value),
+      amount: Number(document.getElementById('amount').value)
+    })
+  });
+  if (!res.ok) {
+    alert(await res.text());   // now you'll actually SEE "Amount exceeds offline spending limit (200.00)"
+    return;
+  }
+  refresh();
+}
+    async function gossip() { await fetch('/api/mesh/gossip', {method: 'POST'}); refresh(); }
+    async function flush()  { await fetch('/api/mesh/flush', {method: 'POST'}); refresh(); }
+    async function reset()  { await fetch('/api/mesh/reset', {method: 'POST'}); refresh(); }
+
+    refresh();
+</script>
+</body>
+</html>
